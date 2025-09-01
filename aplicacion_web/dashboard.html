@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8"/>
+	<meta name="viewport" content="width=device-width,initial-scale=1"/>
+	<title>TFG K-PROJECT Dashboard</title>
+	<script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@^1"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
+
+	<style>
+		:root {
+			--primary: #20c997;
+			--secondary: #17a2b8;
+			--dark: #f8f9fa;
+			--darker: #e9ecef;
+			--card: #ffffff;
+			--text: #343a40;
+			--subtext: #6c757d;
+			--border: #dee2e6;
+			--dot-size: 12px;
+		}
+
+		* {
+			margin:0; padding:0; box-sizing:border-box
+		}
+
+		body {
+			font-family:sans-serif;
+			background: linear-gradient(135deg, var(--dark), var(--darker));
+			color: var(--text);
+			min-height:100vh;
+		}
+		
+		.hidden {
+			display:none!important 
+		}
+
+		.header {
+			background: var(--card);
+			padding:1rem 2rem;
+			display:flex; justify-content:space-between; align-items:center;
+			border-bottom:3px solid var(--primary);
+		}
+
+		.header h1 {
+			color:var(--primary)
+		}
+		
+		.status-indicator {
+			display:flex; align-items:center; gap:.5rem;
+			background:rgba(32,201,151,.1);
+			padding:.5rem 1rem;
+			border:1px solid var(--primary);
+			border-radius:20px;
+		}
+		.status-dot {
+			width:var(--dot-size); height:var(--dot-size); border-radius:50%;
+			background:var(--primary);
+			animation:pulse 2s infinite;
+		}
+
+		@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+		.controls {
+			background: var(--card);
+			margin:1rem 2rem;
+			padding:1.5rem;
+			border:1px solid var(--border);
+			border-radius:12px;
+		}
+
+		.controls-grid {
+			display:flex;
+			justify-content:center;
+			gap:3rem;
+			flex-wrap:wrap;
+			align-items:flex-end;
+		}
+
+		.btn-wrapper {
+			display:flex;
+			flex-direction:column;
+			gap:.5rem;
+			min-width:180px;
+		}
+
+		.btn.frequency {
+			background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+		}
+
+		.form-group { 
+			display:flex; 
+			flex-direction:column; 
+			gap:.5rem; 
+			min-width:180px;
+		}
+
+		.form-group label { 
+			color:var(--subtext); text-align:center; 
+		}
+		
+		.form-group select,
+		.form-group input {
+			background:var(--darker);
+			border:1px solid var(--border);
+			color:var(--text);
+			padding:.7rem; border-radius:8px;
+		}
+
+		.devices-list {
+			max-height:120px; overflow-y:auto;
+			background:var(--darker);
+			border:1px solid var(--border);
+			border-radius:8px;
+			padding:.5rem;
+		}
+
+		.devices-list label {
+			display:flex; align-items:center; gap:.5rem;
+			padding:.25rem 0; cursor:pointer;
+		}
+
+		.devices-list input {
+			accent-color: var(--primary)
+		}
+
+		.btn {
+			background: linear-gradient(135deg,var(--primary),var(--secondary));
+			color:#fff; border:none;
+			padding:.7rem 1.5rem; border-radius:8px;
+			cursor:pointer; text-transform:uppercase;
+		}
+
+		.datetime-range {
+			display: none;
+			max-width: 600px;
+			margin: 1rem auto 0;
+			grid-template-columns: 1fr 1fr;
+			gap: 1rem;
+		}
+
+		.datetime-range.active { 
+			display: grid;
+		}
+
+		.chart-controls {
+			display: flex;
+			justify-content: center;
+			gap: 1rem;
+			margin-top: 0.5rem;
+		}
+
+		.chart-btn {
+			background: var(--primary);
+			color: white;
+			border: none;
+			padding: 0.5rem 1rem;
+			border-radius: 4px;
+			cursor: pointer;
+		}
+
+		.gauges-container {
+			display: flex;
+			gap: 4rem;
+			justify-content: center;
+			flex-wrap: wrap;
+		}
+
+		.gauge-item {
+			text-align: center;
+		}
+
+		.gauge-label {
+			font-size: 0.9rem;
+			color: var(--subtext);
+			margin-top: 0.5rem;
+		}
+
+		.dashboard {
+			padding:1rem 2rem; max-width:1200px; margin:0 auto;
+		}
+
+		.all-legend {
+			list-style:none;
+			display:flex; gap:1rem;
+			margin:0 2rem 1rem;
+			justify-content:center;
+		}
+
+		.all-legend li {
+			display:flex; align-items:center; gap:.5rem;
+			font-size:.9rem; color:var(--text);
+		}
+
+		.all-legend .dot {
+			width:var(--dot-size); height:var(--dot-size);
+			border-radius:50%; flex-shrink:0;
+		}
+
+		.metric-section {
+			background:var(--card);
+			border:1px solid var(--border);
+			border-radius:12px;
+			padding:1rem;
+			margin-bottom:1.5rem;
+		}
+
+		.metric-header {
+			display:grid;
+			grid-template-columns: auto 1fr auto;
+			gap:1rem;
+			margin-bottom:1rem;
+			align-items:center;
+		}
+
+		.metric-header h2 { 
+			color:var(--primary); 
+			margin:0; 
+			text-align:left;
+			justify-self:start;
+		}
+
+		.view-select {
+			background:var(--darker);
+			border:1px solid var(--border);
+			color:var(--text);
+			border-radius:6px;
+			padding:.4rem;
+			justify-self:end;
+		}
+
+		.visibility-controls {
+			display:flex; gap:.5rem; flex-wrap:wrap;
+			justify-self:end;
+		}
+
+		.visibility-btn {
+			background:var(--darker);
+			border:1px solid var(--border);
+			color:var(--text);
+			padding:.4rem .8rem;
+			border-radius:6px;
+			cursor:pointer;
+			display:flex; align-items:center; gap:.3rem;
+			font-size:.85rem;
+			opacity:1; text-decoration:none;
+		}
+
+		.visibility-btn.inactive {
+			opacity:.4; text-decoration:line-through;
+		}
+
+		.visibility-btn .eye { 
+			font-size:1rem 
+		}
+
+		.chart-container { 
+			width:100%; height:300px; position:relative
+		}
+		
+		.last-value {
+			text-align:center; color:var(--subtext); margin-top:.5rem;
+		}
+
+		.gauge-value {
+			font-size:2.5rem; text-align:center;
+			margin-top:1rem; font-weight:bold;
+		}
+
+		.modal {
+			display: none;
+			position: fixed;
+			z-index: 1000;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
+			background-color: rgba(0,0,0,0.5) !important;
+			backdrop-filter: blur(2px);
+		}
+
+		.modal-content {
+			background-color: var(--card) !important;
+			margin: 5% auto;
+			padding: 1.5rem;
+			border: 1px solid var(--border);
+			border-radius: 12px;
+			width: 90%;
+			max-width: 500px;
+			min-width: 280px;
+			text-align: center;
+			box-sizing: border-box;
+		}
+
+		.modal-content h3 {
+			color: var(--primary);
+			margin-bottom: 1rem;
+		}
+
+		.modal-content p {
+			color: var(--subtext);
+			margin-bottom: 1.5rem;
+		}
+
+		.frequency-input {
+			background: var(--darker);
+			border: 1px solid var(--border);
+			color: var(--text);
+			padding: 0.7rem;
+			border-radius: 8px;
+			width: 100px;
+			text-align: center;
+			font-size: 1.1rem;
+			margin: 0 0.5rem;
+		}
+
+		.devices-selection {
+			background: var(--darker);
+			border: 1px solid var(--border);
+			border-radius: 8px;
+			padding: 1rem;
+			margin: 1rem 0;
+			max-height: 200px;
+			overflow-y: auto;
+			text-align: left;
+		}
+
+		.devices-selection h4 {
+			color: var(--text);
+			margin-bottom: 0.5rem;
+			text-align: center;
+		}
+
+		.device-checkbox {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+			padding: 0.3rem 0;
+			cursor: pointer;
+		}
+
+		.device-checkbox input {
+			accent-color: var(--primary);
+		}
+
+		.device-checkbox label {
+			color: var(--text);
+			cursor: pointer;
+			flex: 1;
+		}
+
+		.frequency-section {
+			margin: 1rem 0;
+		}
+
+		.modal-buttons {
+			display: flex;
+			gap: 1rem;
+			justify-content: center;
+			margin-top: 1.5rem;
+		}
+
+		.modal-btn {
+			padding: 0.7rem 1.5rem;
+			border: none;
+			border-radius: 8px;
+			cursor: pointer;
+			font-weight: bold;
+		}
+
+		.modal-btn.confirm {
+			background: linear-gradient(135deg, var(--primary), var(--secondary));
+			color: white;
+		}
+
+		.modal-btn.cancel {
+			background: var(--darker);
+			color: var(--text);
+			border: 1px solid var(--border);
+		}
+
+		.select-all-btn {
+			background: var(--primary);
+			color: white;
+			border: none;
+			padding: 0.4rem 0.8rem;
+			border-radius: 6px;
+			cursor: pointer;
+			font-size: 0.85rem;
+			margin-left: 0.5rem;
+		}
+
+		@media (max-width: 768px) {
+			.modal-content {
+				margin: 2% auto;
+				padding: 1rem;
+				width: 95%;
+				max-height: 90vh;
+				overflow-y: auto;
+			}
+			
+			.devices-selection {
+				max-height: 150px;
+			}
+			
+			.modal-buttons {
+				flex-direction: column;
+				gap: 0.5rem;
+			}
+			
+			.frequency-input {
+				width: 80px;
+			}
+		}
+
+		@media (max-width: 480px) {
+			.modal-content {
+				width: 98%;
+				padding: 0.8rem;
+				margin: 1% auto;
+			}
+			
+			.modal-btn {
+				width: 100%;
+				padding: 0.8rem;
+			}
+		}
+	</style>
+</head>
+<body>
+	<div class="header">
+		<h1>🏠 TFG K-PROJECT Dashboard</h1>
+		<div class="status-indicator">
+			<div class="status-dot"></div>
+			<span id="status-text">Conectado</span>
+		</div>
+	</div>
+
+	<div class="controls">
+		<div class="controls-grid">
+		<div class="form-group">
+			<label for="userSelect">Usuario</label>
+			<select id="userSelect">
+			<option value="">-- Selecciona usuario --</option>
+			</select>
+		</div>
+		<div class="form-group hidden" id="devicesWrapper">
+			<label>Dispositivo(s)</label>
+			<div class="devices-list" id="deviceList"></div>
+		</div>
+		<div class="form-group hidden" id="rangeWrapper">
+			<label for="timeRange">Rango de tiempo</label>
+			<select id="timeRange">
+			<option value="days-1">Último día</option>
+			<option value="days-7">Últimos 7 días</option>
+			<option value="days-30">Últimos 30 días</option>
+			<option value="custom">Personalizado</option>
+			</select>
+		</div>
+		<div class="btn-wrapper hidden" id="updateWrapper">
+			<button class="btn" onclick="manualLoad()">Actualizar configuración</button>
+		</div>
+		<div class="btn-wrapper hidden" id="frequencyWrapper">
+			<button class="btn frequency" onclick="showFrequencyModal()">Cambiar frecuencia de envío</button>
+		</div>
+		</div>
+		<div class="datetime-range" id="customRange">
+		<div class="form-group">
+			<label for="startDate">Inicio</label>
+			<input type="datetime-local" id="startDate">
+		</div>
+		<div class="form-group">
+			<label for="endDate">Fin</label>
+			<input type="datetime-local" id="endDate">
+		</div>
+		</div>
+  	</div>
+
+	<ul class="all-legend" id="globalLegend"></ul>
+
+	<div class="dashboard" id="dashboard"></div>
+
+	<div class="modal" id="frequencyModal">
+		<div class="modal-content">
+			<h3>Cambiar frecuencia de envío</h3>
+			<p>Selecciona los dispositivos y establece la frecuencia:</p>
+			
+			<div class="devices-selection">
+				<h4>
+					Dispositivos 
+					<button class="select-all-btn" onclick="toggleAllDevices()">Seleccionar todos</button>
+				</h4>
+				<div id="modalDeviceList"></div>
+			</div>
+			
+			<div class="frequency-section">
+				<label for="frequencyInput">Frecuencia (1-300 segundos):</label><br>
+				<input type="number" id="frequencyInput" class="frequency-input" 
+						min="1" max="300" value="10" placeholder="10">
+				<span>segundos</span>
+			</div>
+			
+			<div class="modal-buttons">
+				<button class="modal-btn confirm" onclick="sendFrequency()">Confirmar</button>
+				<button class="modal-btn cancel" onclick="closeFrequencyModal()">Cancelar</button>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		const API = 'http://localhost:5000';
+		let allData={}, charts={}, visibility={Current:{},Power:{},Voltage:{}},
+			viewType={Current:'chart',Power:'chart',Voltage:'chart'},
+			deviceColors={}, palette=['#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF','#FF9F40'],
+			autoRefreshId=null, storedPrefs, chartZoomStates = {}, dashboardInitialized = false;
+
+		document.addEventListener('DOMContentLoaded',async()=>{
+			await fetchUsers();
+			loadPrefs();
+			ping();
+			setInterval(ping,10000);
+			setupControls();
+		});
+
+		function savePrefs(){
+			const u=document.getElementById('userSelect').value,
+				devs=[...document.querySelectorAll('#deviceList input:checked')].map(i=>i.value),
+				tr=document.getElementById('timeRange').value,
+				sd=document.getElementById('startDate').value,
+				ed=document.getElementById('endDate').value;
+			localStorage.setItem('iotPrefs',JSON.stringify({
+				visibility,viewType,
+				user:{u,devs,tr,sd,ed}
+			}));
+		}
+		
+		function loadPrefs(){
+			storedPrefs=JSON.parse(localStorage.getItem('iotPrefs')||'{}');
+			if(storedPrefs.user){
+				const {u,devs,tr,sd,ed}=storedPrefs.user;
+				document.getElementById('userSelect').value=u;
+				document.getElementById('timeRange').value=tr||'days-7';
+				if(tr==='custom') document.getElementById('customRange').classList.add('active');
+				document.getElementById('startDate').value=sd||'';
+				document.getElementById('endDate').value=ed||'';
+				visibility=storedPrefs.visibility||visibility;
+				viewType=storedPrefs.viewType||viewType;
+				
+				if(u) {
+					fetchDevices(u).then(() => {
+						if(devs && devs.length) {
+							document.querySelectorAll('#deviceList input')
+								.forEach(i=>{ if(devs.includes(i.value)) i.checked=true; });
+							const hasChecked = document.querySelector('#deviceList input:checked');
+							if(hasChecked) {
+								document.getElementById('rangeWrapper').classList.remove('hidden');
+								document.getElementById('updateWrapper').classList.remove('hidden');
+								document.getElementById('frequencyWrapper').classList.remove('hidden');
+								setTimeout(() => {
+									fetchAndRender();
+									renderGlobalLegend(devs);
+									startAutoRefresh();
+								}, 100);
+							}
+						}
+					});
+				}
+			}
+		}
+
+		function startAutoRefresh(){
+			if(autoRefreshId) clearInterval(autoRefreshId);
+			autoRefreshId=setInterval(()=>{
+				saveZoomStates();
+				fetchAndRender();
+			},10000);
+		}
+
+		function saveZoomStates(){
+			Object.keys(charts).forEach(metric => {
+				const chart = charts[metric];
+				if(chart && chart.scales && chart.scales.x){
+					const scale = chart.scales.x;
+					const dataTimes = chart.data.datasets.flatMap(ds => ds.data.map(p=>new Date(p.x).getTime()));
+					if(dataTimes.length===0) return;
+					const originalMin = Math.min(...dataTimes), originalMax = Math.max(...dataTimes);
+
+					if(scale.min !== undefined && scale.max !== undefined){
+						if(scale.min === originalMin && scale.max === originalMax){
+							delete chartZoomStates[metric];
+						} else {
+							chartZoomStates[metric] = { min: scale.min, max: scale.max, isZoomed: true };
+						}
+					}
+				}
+			});
+		}
+
+		async function ping(){
+			try{
+				const r=await fetch(API+'/Ping'), ok=r.ok;
+				document.querySelector('.status-dot').style.background=ok?'var(--primary)':'#ff4757';
+				document.getElementById('status-text').textContent=ok?'Conectado':'Desconectado';
+			}catch{
+				document.querySelector('.status-dot').style.background='#ff4757';
+				document.getElementById('status-text').textContent='Desconectado';
+			}
+		}
+
+		async function fetchUsers(){
+			try{
+				const us=await (await fetch(API+'/Users')).json(),
+					sel=document.getElementById('userSelect');
+				sel.innerHTML='<option value="">-- Selecciona usuario --</option>'
+							+us.map(u=>`<option>${u}</option>`).join('');
+			}catch{
+				document.getElementById('userSelect').innerHTML='<option>Error</option>';
+			}
+		}
+		
+		async function fetchDevices(user){
+			document.getElementById('devicesWrapper').classList.remove('hidden');
+			const list=document.getElementById('deviceList');
+			list.innerHTML='';
+			const devs=await (await fetch(`${API}/Users/${user}/Devices`)).json();
+			devs.forEach((d,i)=>{
+				if(!deviceColors[d]) deviceColors[d]=palette[Object.keys(deviceColors).length%palette.length];
+				list.innerHTML+=`<label><input type="checkbox" value="${d}"> ${d}</label>`;
+			});
+		}
+		
+		function renderGlobalLegend(devs){
+			const gl=document.getElementById('globalLegend');
+			gl.innerHTML=devs.map(d=>`
+				<li><span class="dot" style="background:${deviceColors[d]}"></span>${d}</li>
+			`).join('');
+		}
+
+		function setupControls(){
+			const u=document.getElementById('userSelect'),
+					dl=document.getElementById('deviceList'),
+					tr=document.getElementById('timeRange');
+			u.onchange=async()=>{
+				clearDash(); 
+				dashboardInitialized = false;
+				if(u.value) {
+				await fetchDevices(u.value);
+				} else {
+				document.getElementById('devicesWrapper').classList.add('hidden');
+				document.getElementById('rangeWrapper').classList.add('hidden');
+				document.getElementById('updateWrapper').classList.add('hidden');
+				document.getElementById('customRange').classList.remove('active');
+				document.getElementById('globalLegend').innerHTML = '';
+				}
+				savePrefs();
+			};
+			dl.onchange=()=>{
+				const hasChecked = dl.querySelector('input:checked');
+				document.getElementById('rangeWrapper').classList.toggle('hidden', !hasChecked);
+				document.getElementById('updateWrapper').classList.toggle('hidden', !hasChecked);
+				document.getElementById('frequencyWrapper').classList.toggle('hidden', !hasChecked);
+				if(!hasChecked) {
+					clearDash();
+					dashboardInitialized = false;
+					document.getElementById('globalLegend').innerHTML = '';
+					if(autoRefreshId) { clearInterval(autoRefreshId); autoRefreshId = null; }
+				}
+				savePrefs();
+			};
+			tr.onchange=()=>{ 
+				savePrefs();
+				document.getElementById('customRange').classList.toggle('active',tr.value==='custom');
+			};
+			['startDate','endDate'].forEach(id=>{
+				document.getElementById(id).onchange=()=>{
+				savePrefs();
+				const tr = document.getElementById('timeRange').value;
+				if(tr === 'custom') {
+					const user = document.getElementById('userSelect').value;
+					const devs = [...document.querySelectorAll('#deviceList input:checked')].map(i=>i.value);
+					const start = document.getElementById('startDate').value;
+					const end = document.getElementById('endDate').value;
+					if(user && devs.length && start && end) {
+					setTimeout(() => {
+						clearDash();
+						dashboardInitialized = false;
+						fetchAndRender();
+						renderGlobalLegend(devs);
+						startAutoRefresh();
+					}, 100);
+					}
+				}
+				};
+			});
+		}
+
+		function clearDash(){
+			if(autoRefreshId) clearInterval(autoRefreshId);
+			allData={}; 
+			Object.values(charts).forEach(c=>c.destroy()); 
+			charts={};
+			chartZoomStates = {};
+			document.getElementById('dashboard').innerHTML='';
+		}
+
+		async function manualLoad(){
+			const user=document.getElementById('userSelect').value;
+			if(!user) return alert('Selecciona usuario');
+			const devs=[...document.querySelectorAll('#deviceList input:checked')].map(i=>i.value);
+			if(!devs.length) return alert('Marca al menos un dispositivo');
+			const tr=document.getElementById('timeRange').value;
+			if(tr==='custom') {
+				const s=document.getElementById('startDate').value,
+					e=document.getElementById('endDate').value;
+				if(!s||!e) return alert('Rango incompleto');
+			}
+			
+			clearDash();
+			dashboardInitialized = false;
+			
+			await fetchAndRender();
+			renderGlobalLegend(devs);
+			savePrefs();
+			startAutoRefresh();
+		}
+
+		async function fetchAndRender(){
+			const user=document.getElementById('userSelect').value;
+			if(!user) return;
+			const devs=[...document.querySelectorAll('#deviceList input:checked')].map(i=>i.value);
+			if(!devs.length) return;
+			const p=new URLSearchParams(),
+					tr=document.getElementById('timeRange').value;
+			if(tr!=='custom'){ 
+				p.set('Days',tr.split('-')[1]); 
+			} else {
+				const s=document.getElementById('startDate').value,
+					e=document.getElementById('endDate').value;
+				if(!s || !e){
+					clearDash();
+					return;
+				}
+				p.set('Start',s); p.set('Stop',e);
+			}
+			
+			try {
+				const newData = {};
+				await Promise.all(devs.map(async d=>{
+				const js=await (await fetch(`${API}/Data/${user}?${p}&Device=${encodeURIComponent(d)}`)).json();
+				newData[d]=js.Data[d]||{};
+				}));
+				
+				allData = newData;
+				
+				if(!dashboardInitialized) {
+					renderDashboard(devs);
+					dashboardInitialized = true;
+				} else {
+					['Power','Current','Voltage'].forEach(m => {
+						updateMetricData(m, devs);
+					});
+				}
+			} catch(error) {
+				console.error('Error fetching data:', error);
+			}
+		}
+
+		function renderDashboard(devs){
+			const dash=document.getElementById('dashboard');
+			dash.innerHTML='';
+			
+			['Power','Current','Voltage'].forEach(m=>{
+				const sec=document.createElement('div');
+				sec.className='metric-section';
+				sec.innerHTML=`
+				<div class="metric-header">
+					<h2>${{Power:'Potencia',Current:'Corriente',Voltage:'Voltaje'}[m]}</h2>
+					<select class="view-select" id="view_${m}">
+					<option value="chart"${viewType[m]==='chart'?' selected':''}>Gráfica</option>
+					<option value="gauge"${viewType[m]==='gauge'?' selected':''}>Gauge</option>
+					</select>
+					<div class="visibility-controls" id="vis_${m}"></div>
+				</div>
+				<div id="content_${m}"></div>
+				`;
+				dash.appendChild(sec);
+
+				sec.querySelector(`#view_${m}`).onchange=e=>{
+				viewType[m]=e.target.value; 
+				savePrefs();
+				if(charts[m]) {
+					saveZoomStates();
+					charts[m].destroy();
+					delete charts[m];
+				}
+				updateMetric(m,devs);
+				};
+
+				const vc=sec.querySelector(`#vis_${m}`);
+				devs.forEach(d=>{
+				if(visibility[m][d]===undefined) visibility[m][d]=true;
+				const btn=document.createElement('button');
+				btn.className='visibility-btn'+(visibility[m][d]?'':' inactive');
+				btn.innerHTML=`<span class="eye">${visibility[m][d]?'👁️':'🚫'}</span>${d}`;
+				btn.onclick=()=>{
+					visibility[m][d]=!visibility[m][d];
+					btn.classList.toggle('inactive',!visibility[m][d]);
+					btn.querySelector('.eye').textContent=visibility[m][d]?'👁️':'🚫';
+					savePrefs(); 
+					updateMetric(m,devs);
+				};
+				vc.appendChild(btn);
+				});
+
+				updateMetric(m,devs);
+			});
+		}
+
+		function updateMetricData(m, devs) {
+			if (!charts[m] && viewType[m] !== 'gauge') return;
+			const vis = devs;
+			if (!vis.length) return;
+			
+			if (viewType[m] === 'chart' && charts[m]) {
+				const chart = charts[m];
+				chart.data.datasets.forEach(ds => {
+					if (vis.includes(ds.label) && allData[ds.label][m]) {
+						ds.data = allData[ds.label][m].map(p=>({x:p.timestamp,y:p.Value}));
+						ds.hidden = false;
+					} else {
+						ds.hidden = true;
+					}
+				});
+				chart.update('none');
+				if(chartZoomStates[m] && chartZoomStates[m].isZoomed) {
+					setTimeout(()=>{
+						chart.zoomScale('x',{min:chartZoomStates[m].min,max:chartZoomStates[m].max},'none');
+					},50);
+				}
+			} else if (viewType[m] === 'gauge') {
+				drawMultipleGauges(m, devs);
+			}
+		}
+
+		function updateMetric(m,devs){
+			const cont=document.getElementById(`content_${m}`),
+					vis=devs.filter(d=>visibility[m][d]);
+			if(!vis.length){ cont.innerHTML=''; return; }
+			if(viewType[m]==='gauge'){
+				cont.innerHTML = `<div class="gauges-container" id="gauges_${m}"></div>`;
+				drawMultipleGauges(m, devs);
+			} else {
+				cont.innerHTML=`
+					<div class="chart-container"><canvas id="chart_${m}"></canvas></div>
+					<div class="chart-controls">
+						<button class="chart-btn" onclick="panChart('${m}', 'left')">◀</button>
+						<button class="chart-btn" onclick="resetZoom('${m}')">Reset</button>
+						<button class="chart-btn" onclick="panChart('${m}', 'right')">▶</button>
+					</div>
+				`;
+				drawChart(m,vis);
+			}
+		}
+
+		function panChart(metric, direction) {
+			const chart = charts[metric];
+			if (!chart) return;
+			
+			const scale = chart.scales.x;
+			const range = scale.max - scale.min;
+			const step = range * 0.2;
+			
+			if (direction === 'left') {
+				chart.pan({x: -step}, undefined, 'none');
+			} else {
+				chart.pan({x: step}, undefined, 'none');
+			}
+		}
+
+		function resetZoom(metric) {
+			const chart = charts[metric];
+			if (chart) {
+				chart.resetZoom();
+				delete chartZoomStates[metric];
+			}
+		}
+
+		function drawMultipleGauges(m, devs) {
+			let container = document.getElementById(`gauges_${m}`);
+			if (!container) {
+				const cont = document.getElementById(`content_${m}`);
+				cont.innerHTML = `<div class="gauges-container" id="gauges_${m}"></div>`;
+				container = document.getElementById(`gauges_${m}`);
+			}
+
+			const ut = {Current:'A',Power:'W',Voltage:'V'}[m];
+			const visibleDevs = devs.filter(d => visibility[m][d]);
+
+			container.innerHTML = visibleDevs.map(d => {
+				const data = allData[d][m] || [];
+				const value = data.length ? data[data.length - 1].Value : 0;
+				return `
+				<div class="gauge-item">
+					<div class="gauge-value" style="color:${deviceColors[d]}">
+					${value.toFixed(2)} ${ut}
+					</div>
+					<div class="gauge-label">${d}</div>
+				</div>
+				`;
+			}).join('');
+		}
+
+		function drawChart(m,devs){
+			const ctx=document.getElementById(`chart_${m}`);
+			if(!ctx) return;
+			const ds=devs.map(d=>({
+				label:d,
+				data:(allData[d][m]||[]).map(p=>({x:p.timestamp,y:p.Value})),
+				borderColor:deviceColors[d],
+				backgroundColor:'transparent',
+				fill:false,
+				tension:0.2,
+				pointRadius: 4,
+				pointBackgroundColor: '#000',
+				pointBorderColor: deviceColors[d],
+				pointBorderWidth: 2,
+				hidden: !visibility[m][d]
+			}));
+			if(charts[m]) charts[m].destroy();
+			charts[m]=new Chart(ctx,{
+				type:'line',
+				data:{datasets:ds},
+				options:{
+					responsive:true, maintainAspectRatio:false,
+					scales:{
+						x:{
+						type:'time',
+						time:{tooltipFormat:'dd/LL HH:mm',unit:'hour'},
+						title:{display:true,text:'Tiempo'},
+						ticks:{autoSkip:true,maxRotation:0}
+						},
+						y:{ title:{display:true,text:{Power:'W',Current:'A',Voltage:'V'}[m]} }
+					},
+					interaction:{mode:'index',intersect:false},
+					plugins:{
+						legend:{display:false},
+						zoom:{
+							zoom:{
+								wheel:{enabled:true},pinch:{enabled:true},mode:'x',
+								onZoomComplete:({chart})=>{
+								const scale=chart.scales.x;
+								chartZoomStates[m]={min:scale.min,max:scale.max,isZoomed:true};
+								}
+							},
+							pan:{
+								enabled:true,mode:'x',threshold:5,
+								onPanComplete:({chart})=>{
+								const scale=chart.scales.x;
+								chartZoomStates[m]={min:scale.min,max:scale.max,isZoomed:true};
+								}
+							},
+							limits: {
+								x: {min: 'original', max: 'original'}
+							}
+						}
+					}
+				}
+			});
+			if(chartZoomStates[m] && chartZoomStates[m].isZoomed){
+				setTimeout(()=>{
+				charts[m].zoomScale('x',{min:chartZoomStates[m].min,max:chartZoomStates[m].max},'none');
+				},100);
+			}
+		}
+
+		function showFrequencyModal() {
+			const user = document.getElementById('userSelect').value;
+			if (!user) {
+				alert('Selecciona un usuario primero');
+				return;
+			}
+			
+			const availableDevices = [...document.querySelectorAll('#deviceList input')].map(input => input.value);
+			
+			if (availableDevices.length === 0) {
+				alert('No hay dispositivos disponibles');
+				return;
+			}
+			
+			populateModalDevices(availableDevices);
+			
+			document.getElementById('frequencyModal').style.display = 'block';
+			setTimeout(() => {
+				document.getElementById('frequencyInput').focus();
+				document.getElementById('frequencyInput').select();
+			}, 100);
+		}
+
+		function populateModalDevices(devices) {
+			const modalDeviceList = document.getElementById('modalDeviceList');
+			modalDeviceList.innerHTML = '';
+			
+			devices.forEach(device => {
+				const div = document.createElement('div');
+				div.className = 'device-checkbox';
+				div.innerHTML = `
+				<input type="checkbox" id="modal_${device}" value="${device}">
+				<label for="modal_${device}">${device}</label>
+				`;
+				modalDeviceList.appendChild(div);
+			});
+		}
+
+		function toggleAllDevices() {
+			const checkboxes = document.querySelectorAll('#modalDeviceList input[type="checkbox"]');
+			const allChecked = [...checkboxes].every(cb => cb.checked);
+			
+			checkboxes.forEach(cb => {
+				cb.checked = !allChecked;
+			});
+			
+			const btn = document.querySelector('.select-all-btn');
+			btn.textContent = allChecked ? 'Seleccionar todos' : 'Deseleccionar todos';
+		}
+
+		function closeFrequencyModal() {
+			document.getElementById('frequencyModal').style.display = 'none';
+		}
+
+		function sendFrequency() {
+			const user = document.getElementById('userSelect').value;
+			const frequency = parseInt(document.getElementById('frequencyInput').value);
+			const selectedDevices = [...document.querySelectorAll('#modalDeviceList input[type="checkbox"]:checked')]
+				.map(cb => cb.value);
+			
+			if (!user) {
+				alert('Selecciona un usuario primero');
+				return;
+			}
+			
+			if (selectedDevices.length === 0) {
+				alert('Selecciona al menos un dispositivo');
+				return;
+			}
+			
+			if (isNaN(frequency) || frequency < 1 || frequency > 300) {
+				alert('La frecuencia debe ser un número entero entre 1 y 300 segundos');
+				return;
+			}
+			
+			sendFrequencyToMQTT(user, selectedDevices, frequency);
+			closeFrequencyModal();
+		}
+
+		async function sendFrequencyToMQTT(user, devices, frequency) {
+			try {
+				const statusResponse = await fetch(`${API}/mqtt/status`);
+				const statusData = await statusResponse.json();
+        
+				if (!statusData.connected) {
+					alert('El servidor MQTT no está conectado. Intenta más tarde.');
+					return;
+				}
+
+				console.log('Enviando frecuencia:', {user, devices, frequency});
+				
+				const response = await fetch(`${API}/SendFrequency`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						user: user,
+						devices: devices,
+						frequency: frequency
+					})
+				});
+
+				const result = await response.json();
+        		console.log('Respuesta del servidor:', result);
+				
+				if (response.ok) {
+					const deviceList = devices.join(', ');
+					alert(`Frecuencia cambiada a ${frequency} segundos para los dispositivos: ${deviceList}`);
+				} else {
+					const errorData = await response.json();
+					alert(`Error al enviar la frecuencia: ${errorData.error || 'Error desconocido'}`);
+				}
+			} catch (error) {
+				console.error('Error:', error);
+				alert('Error de conexión al enviar la frecuencia');
+			}
+		}
+
+		window.onclick = function(event) {
+			const modal = document.getElementById('frequencyModal');
+			if (event.target === modal) {
+				closeFrequencyModal();
+			}
+		}
+
+		document.addEventListener('DOMContentLoaded', function() {
+			const frequencyInput = document.getElementById('frequencyInput');
+			if (frequencyInput) {
+				frequencyInput.addEventListener('keypress', function(e) {
+				if (e.key === 'Enter') {
+					sendFrequency();
+				}
+				});
+			}
+		});
+	</script>
+</body>
+</html>

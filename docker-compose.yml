@@ -1,0 +1,71 @@
+services:
+  influxdb:
+    image: influxdb:2.7
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUX_ADMIN_USER}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUX_ADMIN_PASSWORD}
+      - DOCKER_INFLUXDB_INIT_ORG=${INFLUX_ORG}
+      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUX_BUCKET}
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUX_TOKEN}
+    restart: always
+    networks:
+      iot_network:
+        ipv4_address: 172.20.0.10
+    
+  mqtt:
+    build: 
+      context: ./api_base_de_datos
+    container_name: api_base_de_datos
+    env_file:
+      - .env
+    depends_on:
+      - influxdb
+    restart: always
+    networks:
+      iot_network:
+        ipv4_address: 172.20.0.11
+
+  api:
+    build: 
+      context: ./api_datos
+    container_name: api_datos
+    ports:
+      - "5000:5000"
+    depends_on:
+      - influxdb
+    env_file:
+      - .env
+    restart: always
+    networks:
+      iot_network:
+        ipv4_address: 172.20.0.20
+
+  web:
+    build:
+      context: ./aplicacion_web
+    container_name: aplicacion_web
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      iot_network:
+        ipv4_address: 172.20.0.21
+
+volumes:
+  influxdb-data:
+
+networks:
+  iot_network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/24
